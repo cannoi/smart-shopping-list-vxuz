@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Shopping List</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .paf-made-by {
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      font-size: 11px;
+      color: #6b7280;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 4px 8px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      z-index: 50;
+      pointer-events: none;
+    }
+  </style>
+<style>.paf-made-by{position:fixed;right:8px;bottom:8px;width:min(72px,12vw);max-width:12vw;height:auto;object-fit:contain;opacity:.5;background:transparent;padding:0;border:0;box-shadow:none;filter:none;pointer-events:none;z-index:30}</style></head>
+<body class="bg-slate-50 min-h-screen pb-16 text-slate-800">
+  <div class="max-w-2xl mx-auto p-4 sm:p-6">
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-6 bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+      <div>
+        <h1 class="text-2xl font-bold text-emerald-600 flex items-center gap-2">
+          <i class="fa-solid fa-cart-shopping"></i> Smart Shopping List
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">Organize your grocery shopping effortlessly</p>
+      </div>
+      <span id="item-count-badge" class="bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-emerald-100">
+        0 items left
+      </span>
+    </header>
+
+    <!-- Add Item Form -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 mb-6">
+      <form id="add-form" class="flex flex-col sm:flex-row gap-3">
+        <input 
+          type="text" 
+          id="item-name" 
+          placeholder="e.g. Fresh Apples, Milk, Bread..." 
+          class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+          required
+        >
+        <div class="flex gap-2">
+          <input 
+            type="number" 
+            id="item-qty" 
+            value="1" 
+            min="1" 
+            max="99"
+            class="w-20 px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-center"
+          >
+          <button 
+            type="submit" 
+            class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+          >
+            <i class="fa-solid fa-plus"></i> Add Item
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Filter & Actions -->
+    <div class="flex justify-between items-center mb-4 px-1 gap-2 flex-wrap">
+      <div class="flex gap-1 bg-slate-200/60 p-1 rounded-xl text-xs font-medium">
+        <button onclick="setFilter('all')" id="btn-filter-all" class="px-3 py-1.5 rounded-lg bg-white shadow-sm text-slate-800">All</button>
+        <button onclick="setFilter('active')" id="btn-filter-active" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Active</button>
+        <button onclick="setFilter('completed')" id="btn-filter-completed" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Completed</button>
+      </div>
+      <button onclick="clearCompleted()" class="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1">
+        <i class="fa-regular fa-trash-can"></i> Clear Completed
+      </button>
+    </div>
+
+    <!-- Item List -->
+    <div id="list-container" class="space-y-2">
+      <!-- Dynamic list -->
+    </div>
+  </div>
+
+  
+
+  <script>
+    let items = [];
+    let filter = 'all';
+
+    async function fetchItems() {
+      try {
+        const res = await fetch('/api/items');
+        items = await res.json();
+        render();
+      } catch (err) {
+        console.error('Failed to load items:', err);
+      }
+    }
+
+    function setFilter(f) {
+      filter = f;
+      ['all', 'active', 'completed'].forEach(id => {
+        const btn = document.getElementById(`btn-filter-${id}`);
+        if (id === f) {
+          btn.className = 'px-3 py-1.5 rounded-lg bg-white shadow-sm text-slate-800 font-medium';
+        } else {
+          btn.className = 'px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 font-medium';
+        }
+      });
+      render();
+    }
+
+    async function toggleItem(id, currentBought) {
+      try {
+        const res = await fetch(`/api/items/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bought: !currentBought })
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          items = items.map(item => item.id === id ? updated : item);
+          render();
+        }
+      } catch (err) {
+        console.error('Error toggling item:', err);
+      }
+    }
+
+    async function deleteItem(id) {
+      try {
+        const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          items = items.filter(item => item.id !== id);
+          render();
+        }
+      } catch (err) {
+        console.error('Error deleting item:', err);
+      }
+    }
+
+    async function clearCompleted() {
+      try {
+        const res = await fetch('/api/items', { method: 'DELETE' });
+        if (res.ok) {
+          items = items.filter(item => !item.bought);
+          render();
+        }
+      } catch (err) {
+        console.error('Error clearing completed:', err);
+      }
+    }
+
+    document.getElementById('add-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nameInput = document.getElementById('item-name');
+      const qtyInput = document.getElementById('item-qty');
+      const name = nameInput.value.trim();
+      const quantity = parseInt(qtyInput.value) || 1;
+
+      if (!name) return;
+
+      try {
+        const res = await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, quantity })
+        });
+        if (res.ok) {
+          const newItem = await res.json();
+          items.unshift(newItem);
+          nameInput.value = '';
+          qtyInput.value = '1';
+          render();
+        }
+      } catch (err) {
+        console.error('Error adding item:', err);
+      }
+    });
+
+    function render() {
+      const container = document.getElementById('list-container');
+      const activeCount = items.filter(i => !i.bought).length;
+      document.getElementById('item-count-badge').textContent = `${activeCount} item${activeCount === 1 ? '' : 's'} left`;
+
+      let filtered = items;
+      if (filter === 'active') filtered = items.filter(i => !i.bought);
+      if (filter === 'completed') filtered = items.filter(i => i.bought);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 bg-white rounded-2xl border border-slate-100">
+            <i class="fa-regular fa-clipboard text-3xl text-slate-300 mb-2"></i>
+            <p class="text-slate-500 text-sm font-medium">No items found in this view</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => `
+        <div class="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-100 hover:border-slate-200 transition-all shadow-sm ${item.bought ? 'opacity-60 bg-slate-50' : ''}">
+          <div class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onclick="toggleItem('${item.id}', ${item.bought})">
+            <div class="w-5 h-5 rounded-md border ${item.bought ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300'} flex items-center justify-center transition-colors flex-shrink-0">
+              ${item.bought ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="font-medium text-sm text-slate-800 truncate ${item.bought ? 'line-through text-slate-400' : ''}">
+                ${item.name}
+              </p>
+              <span class="inline-block mt-0.5 text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                ${item.category}
+              </span>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 ml-2">
+            <span class="text-xs font-semibold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg border border-emerald-100">
+              x${item.quantity}
+            </span>
+            <button onclick="deleteItem('${item.id}')" class="text-slate-400 hover:text-red-500 p-1 transition-colors text-sm">
+              <i class="fa-regular fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    fetchItems();
+  </script>
+<img class="paf-made-by" src="/made-by.png" alt="Made with App Builder — Pi SoloHost"></body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "smart-shopping-list",
+  "version": "1.0.0",
+  "description": "Smart Shopping List App for SoloHost",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node -e \"const http = require('http'); http.get('http://127.0.0.1:' + (process.env.PORT || 8080) + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(0));\""
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  }
+}

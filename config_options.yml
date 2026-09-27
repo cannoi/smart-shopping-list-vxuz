@@ -1,0 +1,6 @@
+options:
+  APP_PORT:
+    type: integer
+    default: 18080
+    description: "Cổng trên máy host để truy cập ứng dụng Smart Shopping List"
+    label: "Host Port"

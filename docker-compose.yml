@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  shopping-list:
+    image: ghcr.io/placeholder/smart-shopping-list:latest
+    container_name: smart-shopping-list
+    ports:
+      - "127.0.0.1:${APP_PORT}:8080"
+    environment:
+      - PORT=8080
+    labels:
+      pi.ui.primary: "true"
+    restart: always
